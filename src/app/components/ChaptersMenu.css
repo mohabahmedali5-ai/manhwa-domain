@@ -1,0 +1,14 @@
+.chapters-menu {
+  padding: 6px 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  background: #2e1f30;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.chapters-menu option {
+  background: #2e1f30;
+  color: #fff;
+}

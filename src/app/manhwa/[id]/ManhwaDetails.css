@@ -1,0 +1,225 @@
+/* ====== إعداد الصفحة العامة ====== */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #000, #2e1f30);
+  color: #fff;
+  font-family: "Cairo", Arial, sans-serif;
+  user-select: none;
+  overflow-x: hidden;
+}
+
+/* ====== الهيدر مركز بالكامل ====== */
+.manhwa-header {
+  display: flex;
+  justify-content: center; /* مركز العناصر أفقياً */
+  align-items: center;
+  padding: 12px 20px;
+  background: rgba(0, 0, 0, 0.6);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-left,
+.header-right {
+  display: none; /* نخفي أي عناصر على اليمين واليسار */
+}
+
+.header-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logo {
+  cursor: pointer;
+  height: 120px;
+}
+
+/* ====== صفحة التفاصيل ====== */
+.manhwa-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.manhwa-card {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+  padding: 15px;
+  max-width: 850px;
+  width: 100%;
+  margin-bottom: 25px;
+}
+
+.cover-image {
+  width: 150px;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.manhwa-info {
+  margin-right: 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.manhwa-title {
+  font-size: 22px;
+  margin-bottom: 6px;
+  font-weight: bold;
+}
+
+.manhwa-info p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: #ccc;
+}
+
+.description {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #aaa;
+}
+
+.start-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.start-buttons button {
+  background: #470b3d;
+  border: none;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 15px;
+  transition: 0.3s;
+}
+
+.start-buttons button:hover {
+  background: #231736;
+}
+
+.chapters-title {
+  margin-top: 15px;
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.chapters-list {
+  list-style: none;
+  padding: 0;
+  width: 100%;
+  max-width: 800px;
+}
+
+.chapters-list li {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px 15px;
+  margin: 5px 0;
+  border-radius: 8px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 12px;
+}
+
+.chapters-list a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  flex: 1;
+}
+
+.chapter-number {
+  font-weight: bold;
+  font-size: 14px;
+  color: #ffffff;
+  min-width: 30px;
+  text-align: center;
+}
+
+/* ====== موبايل ====== */
+@media (max-width: 768px) {
+  .manhwa-header {
+    justify-content: center;
+    padding: 7px 0;
+  }
+
+  .logo {
+    height: 100px;
+  }
+
+  .manhwa-card {
+    flex-direction: column;
+    align-items: center;
+    width: 95%;
+    padding: 12px;
+    box-shadow: 0 0 18px rgba(0, 0, 0, 0.5);
+  }
+
+  .cover-image {
+    width: 160px;
+    height: 240px;
+    margin-bottom: 12px;
+  }
+
+  .manhwa-info {
+    margin-right: 0;
+    align-items: center;
+    gap: 5px;
+    text-align: center;
+  }
+
+  .manhwa-title {
+    font-size: 20px;
+  }
+
+  .manhwa-info p {
+    font-size: 16px;
+  }
+
+  .description {
+    font-size: 13px;
+  }
+
+  .start-buttons {
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .start-buttons button {
+    width: 100%;
+    font-size: 14px;
+    padding: 8px 0;
+  }
+
+  .chapters-list li {
+    flex-direction: row;
+    align-items: center;
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+
+  .chapter-number {
+    min-width: 35px;
+    font-size: 15px;
+  }
+}

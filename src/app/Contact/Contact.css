@@ -1,0 +1,33 @@
+.contact-container {
+  max-width: 800px;
+  margin: 50px auto;
+  padding: 20px;
+  background-color: #2a002a;
+  border-radius: 12px;
+  color: #fff;
+  font-family: 'gg ss', sans-serif;
+}
+
+.contact-main h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.contact-main p {
+  text-align: center;
+  margin-bottom: 15px;
+  color: #ccc;
+  font-size: 16px;
+}
+
+.contact-main a {
+  display: block;
+  text-align: center;
+  margin-top: 20px;
+  color: #8e2de2;
+  text-decoration: none;
+}
+
+.contact-main a:hover {
+  color: #d17aff;
+}
