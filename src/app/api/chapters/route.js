@@ -1,9 +1,10 @@
 // src/app/api/chapters/route.js
-import clientPromise from "@/lib/mongodb";
+import { getClient } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { requireAdminAuth, verifyCsrf } from "@/lib/auth.js";
 import { checkRateLimit, sanitizeInput, applySecurityHeaders } from "@/lib/security.js";
 
+// ======== GET: جلب كل الفصول الخاصة بمانهوا معينة ========
 export async function GET(req) {
   const headers = new Headers();
   applySecurityHeaders(headers);
@@ -16,10 +17,9 @@ export async function GET(req) {
       return new Response(JSON.stringify({ error: "Invalid manhwaId" }), { status: 400, headers });
     }
 
-    const client = await clientPromise;
+    const client = await getClient();
     const db = client.db(process.env.MONGODB_DB || "Manhwa-domain");
 
-    // جلب كل الفصول المرتبة تصاعديًا
     const chapters = await db
       .collection("chapters")
       .find({ manhwaId: new ObjectId(manhwaId) })
@@ -33,6 +33,7 @@ export async function GET(req) {
   }
 }
 
+// ======== POST: حفظ فصل جديد أو تحديثه ========
 export async function POST(req) {
   const headers = new Headers();
   applySecurityHeaders(headers);
@@ -58,7 +59,7 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: "Invalid data" }), { status: 400, headers });
     }
 
-    const client = await clientPromise;
+    const client = await getClient();
     const db = client.db(process.env.MONGODB_DB || "Manhwa-domain");
 
     await db.collection("chapters").updateOne(
@@ -74,6 +75,7 @@ export async function POST(req) {
   }
 }
 
+// ======== DELETE: حذف فصل ========
 export async function DELETE(req) {
   const headers = new Headers();
   applySecurityHeaders(headers);
@@ -100,7 +102,7 @@ export async function DELETE(req) {
       return new Response(JSON.stringify({ error: "Invalid data" }), { status: 400, headers });
     }
 
-    const client = await clientPromise;
+    const client = await getClient();
     const db = client.db(process.env.MONGODB_DB || "Manhwa-domain");
 
     const result = await db.collection("chapters").deleteOne({

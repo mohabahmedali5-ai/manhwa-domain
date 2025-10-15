@@ -1,4 +1,4 @@
-import clientPromise from "@/lib/mongodb";
+import { getClient } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { requireAdminAuth } from "@/lib/auth";
 
@@ -9,7 +9,7 @@ export async function GET(req) {
     const id = url.searchParams.get("id");
     const slug = url.searchParams.get("slug");
 
-    const client = await clientPromise;
+    const client = await getClient();
     const db = client.db("Manhwa-domain");
 
     if (id || slug) {
@@ -55,7 +55,7 @@ export async function POST(req) {
     const body = await req.json();
     if (!body.slug && body.title) body.slug = body.title.trim().toLowerCase().replace(/\s+/g, "-");
 
-    const client = await clientPromise;
+    const client = await getClient();
     const db = client.db("Manhwa-domain");
     const result = await db.collection("Manhwas").insertOne(body);
 
@@ -79,7 +79,7 @@ export async function PUT(req) {
     if (!id && !slug)
       return new Response(JSON.stringify({ error: "يجب تحديد _id أو slug للمانهوا" }), { status: 400, headers: { "Content-Type": "application/json" } });
 
-    const client = await clientPromise;
+    const client = await getClient();
     const db = client.db("Manhwa-domain");
 
     let query = {};
@@ -118,7 +118,7 @@ export async function DELETE(req) {
     if (!id && !slug)
       return new Response(JSON.stringify({ error: "يجب تحديد _id أو slug للمانهوا" }), { status: 400, headers: { "Content-Type": "application/json" } });
 
-    const client = await clientPromise;
+    const client = await getClient();
     const db = client.db("Manhwa-domain");
 
     let query = {};
