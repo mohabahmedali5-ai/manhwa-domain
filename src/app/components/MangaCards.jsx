@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 
-export default function MangaCards({ manhwas = [], columns = 5 }) {
+export default function MangaCards({ manhwas = [] }) {
   const [chaptersMap, setChaptersMap] = useState({});
 
   useEffect(() => {
@@ -36,17 +36,21 @@ export default function MangaCards({ manhwas = [], columns = 5 }) {
 
           return (
             <div key={id} className="card">
-              {/* الصورة */}
-              <Link href={`/manhwa/${id}`} className="card-image-link">
-                <div className="card-image-wrapper">
-                  <img
-                    src={cover}
-                    alt={`غلاف ${title}`}
-                    className="card-image"
-                    draggable="false"
-                  />
-                </div>
-              </Link>
+              {/* الصورة كخلفية */}
+              <Link
+                href={`/manhwa/${id}`}
+                className="card-image-link"
+                style={{
+                  display: "block",
+                  width: "210px",
+                  height: "286px",
+                  borderRadius: "10px",
+                  backgroundImage: `url(${cover})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  marginBottom: "10px",
+                }}
+              ></Link>
 
               {/* معلومات الكارت */}
               <div className="card-info">

@@ -23,14 +23,14 @@ export default function AdminPage() {
   const [chapters, setChapters] = useState([]);
   const [chapterForm, setChapterForm] = useState({ number: "", title: "", pages: "" });
 
+  // --- Pagination للفصول ---
+  const [chapterPage, setChapterPage] = useState(1);
+  const CHAPTERS_PER_PAGE = 20;
+
   function notify(msg) { try { window.alert(msg); } catch(e) { console.log(msg); } }
+  function buildHeaders(extra = {}) { const h = { "Content-Type": "application/json", ...extra }; if (csrfToken) h["x-csrf-token"] = csrfToken; return h; }
 
-  function buildHeaders(extra = {}) {
-    const h = { "Content-Type": "application/json", ...extra };
-    if (csrfToken) h["x-csrf-token"] = csrfToken;
-    return h;
-  }
-
+  // --- جلب الجلسة الأولية ---
   useEffect(() => {
     (async function () {
       try {
@@ -43,6 +43,34 @@ export default function AdminPage() {
     })();
   }, []);
 
+  // --- تجديد CSRF كل 4 دقائق ---
+  useEffect(() => {
+    const interval = setInterval(() => refreshCsrfToken(), 4 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function refreshCsrfToken() {
+    try {
+      const res = await fetch("/api/admin/session", { credentials: "include" });
+      const data = await res.json().catch(() => ({}));
+      if (data?.csrfToken) setCsrfToken(data.csrfToken);
+    } catch (err) { console.log("Failed refresh CSRF:", err); }
+  }
+
+  async function doFetchWithRetry(url, options = {}, retry = true) {
+    options.headers = { ...(options.headers || {}), ...buildHeaders() };
+    options.credentials = "include";
+    let res;
+    try { res = await fetch(url, options); } catch(err) { throw err; }
+    if ((res.status === 401 || res.status === 403) && retry) {
+      await refreshCsrfToken();
+      options.headers = { ...(options.headers || {}), ...buildHeaders() };
+      try { res = await fetch(url, options); } catch(e) { throw e; }
+    }
+    return res;
+  }
+
+  // --- تسجيل الدخول ---
   async function handleLogin(e) {
     e?.preventDefault();
     if (!passwordInput) return notify("أدخل كلمة السر");
@@ -60,17 +88,14 @@ export default function AdminPage() {
         if (data.csrfToken) setCsrfToken(data.csrfToken);
         notify("تم تسجيل الدخول");
         await loadManhwas();
-      } else {
-        notify(data.message || "كلمة السر خاطئة");
-        setAuthenticated(false);
-      }
+      } else notify(data.message || "كلمة السر خاطئة");
     } catch { notify("فشل الاتصال بالسيرفر"); } 
     finally { setIsLoading(false); setPasswordInput(""); }
   }
 
   async function loadManhwas() {
     try {
-      const res = await fetch("/api/manhwas", { credentials: "include" });
+      const res = await doFetchWithRetry("/api/manhwas", { method: "GET" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "فشل تحميل المانهوا");
       setManhwas(Array.isArray(data) ? data.map(normalizeManhwa) : []);
@@ -98,10 +123,11 @@ export default function AdminPage() {
     try {
       const url = new URL("/api/chapters", location.origin);
       url.searchParams.set("manhwaId", manhwaId);
-      const res = await fetch(url.toString(), { credentials: "include" });
+      const res = await doFetchWithRetry(url.toString(), { method: "GET" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "فشل تحميل الفصول");
       setChapters(Array.isArray(data) ? data.map(c => ({ ...c, pages: Array.isArray(c.pages) ? c.pages : [] })) : []);
+      setChapterPage(1);
     } catch (err) { notify(err.message || "فشل تحميل الفصول"); }
   }
 
@@ -113,112 +139,88 @@ export default function AdminPage() {
       return;
     }
     setManhwaForm({
-      title: selectedManhwa.title, description: selectedManhwa.description, story:selectedManhwa.story || "",
+      title: selectedManhwa.title,
+      description: selectedManhwa.description,
+      story:selectedManhwa.story || "",
       coverImage: selectedManhwa.coverImage,
-      author: selectedManhwa.author, artist: selectedManhwa.artist, studio: selectedManhwa.studio,
-      status: selectedManhwa.status, categories: selectedManhwa.categories || []
+      author: selectedManhwa.author,
+      artist: selectedManhwa.artist,
+      studio: selectedManhwa.studio,
+      status: selectedManhwa.status,
+      categories: selectedManhwa.categories || []
     });
     setChapterForm({ number:"", title:"", pages:selectedManhwa.pages?.join("\n") || "" });
     loadChapters(selectedManhwa._id);
   }, [selectedManhwa]);
 
-  async function submitManhwa(e) {
-    e?.preventDefault();
-    setIsLoading(true);
+  // --- submit / delete manhwa ---
+  async function submitManhwa(e) { e?.preventDefault(); setIsLoading(true);
     try {
       const method = selectedManhwa?._id ? "PUT" : "POST";
       const payload = { ...manhwaForm };
       if (selectedManhwa?._id) payload.id = selectedManhwa._id;
-
-      const res = await fetch("/api/manhwas", {
-        method,
-        headers: buildHeaders(),
-        credentials: "include",
-        body: JSON.stringify(payload)
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d?.error || d?.message || "فشل العملية");
-      notify(d.message || "تم الحفظ");
+      const res = await doFetchWithRetry("/api/manhwas", { method, headers: buildHeaders(), body: JSON.stringify(payload) });
+      const d = await res.json().catch(()=>({}));
+      if (!res.ok) throw new Error(d?.error||d?.message||"فشل العملية");
+      notify(d.message||"تم الحفظ");
       setSelectedManhwa(null);
       await loadManhwas();
-    } catch (err) { notify(err.message || "فشل الحفظ"); }
+    } catch(err) { notify(err.message||"فشل الحفظ"); }
     finally { setIsLoading(false); }
   }
 
-  async function deleteManhwa(e, m) {
-    e.stopPropagation();
-    if (!confirm("هل تريد حذف المانهوا؟")) return;
-    setIsLoading(true);
+  async function deleteManhwa(e,m) { e.stopPropagation(); if(!confirm("هل تريد حذف المانهوا؟")) return; setIsLoading(true);
     try {
       const url = new URL("/api/manhwas", location.origin);
       url.searchParams.set("id", m._id);
-      const res = await fetch(url.toString(), {
-        method: "DELETE",
-        headers: buildHeaders(),
-        credentials: "include"
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d?.error || d?.message || "فشل العملية");
-      notify(d.message || "تم الحذف");
-      if (selectedManhwa?._id === m._id) setSelectedManhwa(null);
+      const res = await doFetchWithRetry(url.toString(), { method:"DELETE", headers: buildHeaders() });
+      const d = await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(d?.error||d?.message||"فشل العملية");
+      notify(d.message||"تم الحذف");
+      if(selectedManhwa?._id===m._id) setSelectedManhwa(null);
       await loadManhwas();
-    } catch (err) { notify(err.message || "فشل الحذف"); }
-    finally { setIsLoading(false); }
+    } catch(err){ notify(err.message||"فشل الحذف"); }
+    finally{ setIsLoading(false); }
   }
 
-  async function submitChapter(e) {
-    e?.preventDefault();
-    if (!selectedManhwa?._id) return notify("اختر مانهوا أولاً");
-    setIsLoading(true);
-    try {
-      const chapterNumber = parseInt(chapterForm.number, 10);
-      if (isNaN(chapterNumber)) return notify("رقم الفصل غير صحيح");
-
-      const pagesArray = chapterForm.pages
-        ? chapterForm.pages.split("\n").map(p=>p.trim()).filter(Boolean)
-        : [];
-
-      const body = { ...chapterForm, manhwaId: selectedManhwa._id, number: chapterNumber, pages: pagesArray };
-
-      const res = await fetch("/api/chapters", {
-        method: "POST",
-        headers: buildHeaders(),
-        credentials: "include",
-        body: JSON.stringify(body)
-      });
-
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) return notify(d?.error || d?.message || "فشل العملية");
-
-      notify(d.message || "تم الإضافة");
-      setChapterForm({ number: "", title: "", pages: "" });
+  // --- submit / delete chapter ---
+  async function submitChapter(e){ e?.preventDefault(); if(!selectedManhwa?._id) return notify("اختر مانهوا أولاً"); setIsLoading(true);
+    try{
+      const chapterNumber = parseInt(chapterForm.number,10);
+      if(isNaN(chapterNumber)) return notify("رقم الفصل غير صحيح");
+      const pagesArray = chapterForm.pages ? chapterForm.pages.split("\n").map(p=>p.trim()).filter(Boolean) : [];
+      const body = {...chapterForm, manhwaId:selectedManhwa._id, number:chapterNumber, pages:pagesArray};
+      const res = await doFetchWithRetry("/api/chapters",{ method:"POST", headers:buildHeaders(), body:JSON.stringify(body) });
+      const d = await res.json().catch(()=>({}));
+      if(!res.ok) return notify(d?.error||d?.message||"فشل العملية");
+      notify(d.message||"تم الإضافة");
+      setChapterForm({number:"", title:"", pages:""});
       await loadChapters(selectedManhwa._id);
-    } catch (err) { notify(err.message || "فشل الإضافة"); }
-    finally { setIsLoading(false); }
+    } catch(err){ notify(err.message||"فشل الإضافة"); }
+    finally{ setIsLoading(false); }
   }
 
-  async function deleteChapter(number) {
-    if (!confirm("هل تريد حذف الفصل؟")) return;
-    setIsLoading(true);
-    try {
+  async function deleteChapter(number){ if(!confirm("هل تريد حذف الفصل؟")) return; setIsLoading(true);
+    try{
       const url = new URL("/api/chapters", location.origin);
       url.searchParams.set("manhwaId", selectedManhwa._id);
       url.searchParams.set("number", number);
-      const res = await fetch(url.toString(), {
-        method: "DELETE",
-        headers: buildHeaders(),
-        credentials: "include"
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d?.error || d?.message || "فشل العملية");
-      notify(d.message || "تم الحذف");
+      const res = await doFetchWithRetry(url.toString(), { method:"DELETE", headers:buildHeaders() });
+      const d = await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(d?.error||d?.message||"فشل العملية");
+      notify(d.message||"تم الحذف");
       await loadChapters(selectedManhwa._id);
-    } catch (err) { notify(err.message || "فشل الحذف"); }
-    finally { setIsLoading(false); }
+    } catch(err){ notify(err.message||"فشل الحذف"); }
+    finally{ setIsLoading(false); }
   }
 
-  if (!authenticated) {
-    return (
+  // --- فصل pagination ---
+  const totalPages = Math.ceil(chapters.length/CHAPTERS_PER_PAGE);
+  const paginatedChapters = chapters.slice((chapterPage-1)*CHAPTERS_PER_PAGE, chapterPage*CHAPTERS_PER_PAGE);
+
+  // --- واجهة ---
+  if(!authenticated){
+    return(
       <div style={{ padding:20, maxWidth:400, margin:"auto", color:"#eee", backgroundColor:"#1e1b29", borderRadius:12, boxShadow:"0 0 15px #000" }}>
         <h1 style={{ textAlign:"center", marginBottom:15, color:"#bb86fc" }}>تسجيل الدخول للأدمن</h1>
         <form onSubmit={handleLogin} style={{ display:"flex", flexDirection:"column", gap:10 }}>
@@ -231,7 +233,7 @@ export default function AdminPage() {
     );
   }
 
-  return (
+  return(
     <div style={{ padding:20, maxWidth:1000, margin:"auto", color:"#eee", backgroundColor:"#161122", borderRadius:12, boxShadow:"0 0 20px #000" }}>
       <h1 style={{ textAlign:"center", marginBottom:20, color:"#bb86fc" }}>لوحة التحكم - المانهوا والفصول</h1>
 
@@ -276,7 +278,7 @@ export default function AdminPage() {
           </form>
         </section>
 
-        {/* قسم الفصول */}
+        {/* قسم الفصول مع pagination */}
         {selectedManhwa && (
           <section style={{ backgroundColor:"#1f1633", padding:15, borderRadius:10 }}>
             <h2 style={{ marginBottom:10, color:"#bb86fc" }}>إدارة الفصول لـ: {selectedManhwa.title}</h2>
@@ -289,12 +291,18 @@ export default function AdminPage() {
 
             <div style={{ marginTop:15 }}>
               <h3 style={{ marginBottom:5, color:"#bb86fc" }}>الفصول الحالية:</h3>
-              {chapters.map(c => (
+              {paginatedChapters.map(c => (
                 <div key={c.number} style={{ display:"flex", justifyContent:"space-between", backgroundColor:"#2a2438", padding:8, borderRadius:5, marginBottom:5 }}>
                   <span>{c.number} - {c.title}</span>
                   <button onClick={()=>deleteChapter(c.number)} style={{ backgroundColor:"#bb86fc", color:"#111", border:"none", borderRadius:5, padding:"2px 8px", cursor:"pointer" }}>حذف</button>
                 </div>
               ))}
+              {/* أزرار pagination */}
+              <div style={{ display:"flex", gap:5, marginTop:10 }}>
+                <button disabled={chapterPage<=1} onClick={()=>setChapterPage(p=>p-1)} style={{ padding:"5px 10px", borderRadius:5, cursor:"pointer", backgroundColor:"#bb86fc", color:"#111" }}>السابق</button>
+                <span style={{ padding:"5px 10px" }}>{chapterPage} / {totalPages||1}</span>
+                <button disabled={chapterPage>=totalPages} onClick={()=>setChapterPage(p=>p+1)} style={{ padding:"5px 10px", borderRadius:5, cursor:"pointer", backgroundColor:"#bb86fc", color:"#111" }}>التالي</button>
+              </div>
             </div>
           </section>
         )}

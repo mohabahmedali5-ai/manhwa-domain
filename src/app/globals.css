@@ -1,64 +1,80 @@
-/* ======== VARIABLES ======== */
 :root {
-  --main-bg-color: #1a001a;        /* خلفية الصفحة */
-  --header-bg-color: #000000;      /* خلفية الهيدر */
-  --nav-color: #470b3d;            /* لون NAV BOX */
-  --nav-hover-color: #8e2de2;      /* لون عند hover على NAV BOX */
-  --card-bg-color: #2a002a;        /* خلفية الكروت */
-  --chapter-bg-color: linear-gradient(90deg, #470b3d, #470b3d); /* الخلفية للفصول */
-  --page-btn-color: #ff4747;       /* أزرار الصفحات */
-  --page-btn-hover: #ff6666;       /* hover أزرار الصفحات */
-  --footer-bg-color: #1a001a;      /* خلفية الفوتر */
-  --footer-border: #3a003a;        /* خط الفوتر */
-  --footer-link: #8e2de2;          /* رابط الفوتر */
-  --footer-link-hover: #d17aff;    /* hover رابط الفوتر */
-  --text-color: #fff;              /* لون النص العام */
+  --main-bg-color: #1a001a;
+  --header-bg-color: #000000;
+  --nav-color: #470b3d;
+  --nav-hover-color: #8e2de2;
+  --card-bg-color: #2a002a;
+  --chapter-bg-color: linear-gradient(90deg, #470b3d, #470b3d);
+  --page-btn-color: #ff4747;
+  --page-btn-hover: #ff6666;
+  --footer-bg-color: #1a001a;
+  --footer-border: #3a003a;
+  --footer-link: #8e2de2;
+  --footer-link-hover: #d17aff;
+  --text-color: #fff;
 }
 
-/* ======== BASE STYLES ======== */
-body {
+/* ===== تحسين الأداء العام ===== */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+html, body {
   margin: 0;
   padding: 0;
   background-color: var(--main-bg-color);
   color: var(--text-color);
   font-family: 'gg ss', sans-serif;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
 }
 
-/* ===== حماية الصور من النسخ والRight-Click ===== */
 img {
   user-select: none;
-  pointer-events: none; /* حماية الصور */
+  pointer-events: none;
+  -webkit-user-drag: none;
+  content-visibility: auto;
+  display: block;
+  max-width: 100%;
+  height: auto;
 }
 
 /* ===== HEADER ===== */
 .main-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   background-color: var(--header-bg-color);
-  padding: 10px 20px;
-  flex-wrap: wrap;
+  width: 100%;
+  padding: 20px 0;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  will-change: transform;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.header-center {
-  flex: 1;
-  text-align: center;
+.logo-wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 10px;
 }
 
 .logo {
-  width: 300px; 
+  width: 300px;
   height: auto;
-  display: block;
-  margin: 0 auto;
-}
-
-.header-right {
-  flex: 1;
-  text-align: right;
 }
 
 .search-input {
-  padding: 5px 10px;
+  width: 80%;
+  max-width: 400px;
+  padding: 8px 12px;
   border-radius: 6px;
   border: none;
   outline: none;
@@ -68,26 +84,26 @@ img {
 /* ===== NAV BOX ===== */
 .mobile-nav-box {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   flex-wrap: wrap;
-  padding: 5px 0;
   width: 100%;
-  box-sizing: border-box;
-  gap: 5px;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .mobile-nav-box div,
 .mobile-nav-box a {
   flex: 1 1 23%;
   text-align: center;
-  padding: 6px 0;
+  padding: 8px 0;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 700;
   text-decoration: none;
   color: var(--text-color);
   background-color: var(--nav-color);
-  transition: all 0.3s ease;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  will-change: transform, background-color;
 }
 
 .mobile-nav-box div:hover,
@@ -98,15 +114,12 @@ img {
 
 /* ===== CARDS ===== */
 .cards-container {
-  max-width: 1400px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
   padding: 20px;
-}
-
-.grid-cards {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 20px;
+  gap: 30px;
 }
 
 .card {
@@ -115,59 +128,64 @@ img {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  width: 300px;
   cursor: default;
-}
-
-.card-image-wrapper {
-  flex: 1;
-}
-
-.card-image-link {
-  display: block;
+  contain: layout paint;
+  will-change: transform;
 }
 
 .card-image {
   width: 100%;
-  height: 250px;
+  height: auto;
   object-fit: cover;
   border-radius: 10px;
+  margin-bottom: 10px;
+  transition: transform 0.2s ease;
 }
 
 .card-info {
-  padding: 10px;
+  width: 100%;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 6px;
+  padding: 10px 0;
 }
 
 .card-title {
   font-size: 16px;
   font-weight: 700;
-  color: var(--text-color);
-  margin: 0;
-  white-space: nowrap;
+  text-align: center;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* ===== آخر فصلين ===== */
+/* ===== آخر فصلين داخل الكارت ===== */
 .latest-chapters {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  width: 100%;
+  align-items: center;
 }
 
 .latest-chapter-item {
   background: var(--chapter-bg-color);
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: #fff;
   text-align: center;
   text-decoration: none;
-  display: block;
-  font-family: 'gg ss', sans-serif;
+  width: 90%;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  will-change: transform, box-shadow;
 }
 
 .latest-chapter-item:hover {
@@ -187,7 +205,7 @@ img {
 .page-btn {
   background: var(--page-btn-color);
   color: #fff;
-  padding: 8px 16px;
+  padding: 10px 20px;
   border-radius: 6px;
   border: none;
   cursor: pointer;
@@ -236,79 +254,28 @@ img {
   color: var(--footer-link-hover);
 }
 
-/* ===== MOBILE FULLWIDTH LAYOUT ===== */
+/* ===== MOBILE ===== */
 @media (max-width: 768px) {
-  .grid-cards {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin: 10px;
+  .cards-container {
+    width: 90%;
+    gap: 20px;
   }
 
   .card {
-    align-items: center;
-    padding: 6px;
-  }
-
-  .card-image-wrapper {
-    width: 160px;
-    height: 240px;
-    border-radius: 7px;
-    overflow: hidden;
-    margin-bottom: 1px;
-  }
-
-  .card-image {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .card-info {
-    width: 100%;
-    align-items: center;
-    gap: 6px;
   }
 
   .card-title {
     font-size: 14px;
-    width: 90%;
-    text-align: center;
-  }
-
-  .latest-chapters {
-    width: 90%;
-    gap: 4px;
   }
 
   .latest-chapter-item {
     font-size: 12px;
     padding: 4px 6px;
-    border-radius: 6px;
-  }
-
-  .main-header {
-    flex-direction: column;
-    padding: 10px;
-    text-align: center;
-  }
-
-  .logo {
-    width: 270px;
-    margin-bottom: 4px;
   }
 
   .search-input {
-    width: 80%;
-    padding: 6px 10px;
-    margin-bottom: 6px;
-  }
-
-  .mobile-nav-box {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    padding: 5px 0;
-    gap: 5px;
+    width: 95%;
   }
 
   .mobile-nav-box div,
@@ -318,8 +285,7 @@ img {
     padding: 6px 0;
   }
 
-  .footer-text {
-    font-size: 12px;
-    padding: 12px 5px;
+  .logo {
+    width: 280px;
   }
 }

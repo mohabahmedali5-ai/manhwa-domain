@@ -1,82 +1,43 @@
-// src/workers/admin-login.js
-export const runtime = "nodejs";
-import { createSession, destroySessionCookie, SESSIONS } from "@/lib/session.js";
-import { checkRateLimit, applySecurityHeaders } from "@/lib/security.js";
+import { createSession, destroySessionCookie } from "@/lib/session.js";
+import { applySecurityHeaders } from "@/lib/security.js";
 import { logSecurityEvent } from "@/lib/logger.js";
 
-// 🔒 دالة لتطبيق رؤوس الأمان
-function secureResponse(body, status = 200, extraHeaders = {}) {
-  const headers = new Headers();
-  applySecurityHeaders(headers);
-  headers.set("Content-Type", "application/json");
-  for (const key in extraHeaders) {
-    headers.set(key, extraHeaders[key]);
-  }
-  return new Response(JSON.stringify(body), { status, headers });
-}
-
-// --- POST: Admin Login ---
-export async function handlePOST(req) {
+export async function POST(request) {
   try {
-    // 🛑 Rate Limiting
-    const ip = req.headers.get("cf-connecting-ip") || "unknown";
-    const { limited } = checkRateLimit(ip);
-    if (limited) {
-      return secureResponse({ success: false, message: "عدد الطلبات كبير جدًا" }, 429);
-    }
+    const headers = new Headers();
+    applySecurityHeaders(headers);
 
-    const { password } = await req.json();
+    const { password } = await request.json();
     const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
     if (!password || password !== ADMIN_PASSWORD) {
-      logSecurityEvent("failed_admin_login", { ip });
-      return secureResponse({ success: false, message: "كلمة السر غير صحيحة" }, 401);
+      logSecurityEvent("failed_admin_login", { ip: request.headers.get("x-forwarded-for") || "local" });
+      return new Response(JSON.stringify({ success: false, message: "كلمة السر غير صحيحة" }), { status: 401, headers });
     }
 
-    // 🟢 إنشاء جلسة جديدة للأدمن
     const { cookie, session } = createSession({ role: "admin" });
-    return secureResponse({ success: true, csrfToken: session.csrfToken }, 200, {
-      "Set-Cookie": cookie,
-    });
+    headers.set("Set-Cookie", cookie);
+
+    return new Response(JSON.stringify({ success: true, csrfToken: session.csrfToken }), { status: 200, headers });
   } catch (err) {
-    console.error("❌ Error in admin login:", err);
-    return secureResponse({ success: false, message: "Server error" }, 500);
+    console.error("Error in admin login:", err);
+    return new Response(JSON.stringify({ success: false, message: "Server error" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 }
 
-// --- DELETE: Admin Logout ---
-export async function handleDELETE(req) {
+export async function DELETE(request) {
   try {
-    // 🛑 Rate Limiting
-    const ip = req.headers.get("cf-connecting-ip") || "unknown";
-    const { limited } = checkRateLimit(ip);
-    if (limited) {
-      return secureResponse({ success: false, message: "عدد الطلبات كبير جدًا" }, 429);
-    }
-
-    // 🧹 حذف الكوكي الخاص بالجلسة
-    const cookieHeader = req.headers.get("cookie") || "";
+    const cookieHeader = request.headers.get("cookie") || "";
     const match = cookieHeader.match(/admin_session=([^;]+)/);
     if (match) {
       const sid = match[1];
-      SESSIONS.delete(sid);
+      import("@/lib/session.js").then(mod => mod.SESSIONS.delete(sid)).catch(()=>{});
     }
-
-    return secureResponse({ success: true }, 200, {
-      "Set-Cookie": destroySessionCookie(),
-    });
+    const headers = new Headers();
+    headers.set("Set-Cookie", destroySessionCookie());
+    applySecurityHeaders(headers);
+    return new Response(JSON.stringify({ success: true }), { status: 200, headers });
   } catch (err) {
-    console.error("❌ Error in admin logout:", err);
-    return secureResponse({ success: false }, 500);
+    return new Response(JSON.stringify({ success: false }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 }
-
-// --- Cloudflare Workers Entry ---
-export default {
-  async fetch(req) {
-    const method = req.method.toUpperCase();
-    if (method === "POST") return handlePOST(req);
-    if (method === "DELETE") return handleDELETE(req);
-    return secureResponse({ error: "الطريقة غير مدعومة" }, 405);
-  },
-};

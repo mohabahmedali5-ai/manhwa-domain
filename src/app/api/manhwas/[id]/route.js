@@ -1,25 +1,10 @@
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { requireAdminAuth } from "@/lib/auth";
-import { rateLimit } from "@/lib/rateLimit";
-import { applySecurityHeaders } from "@/lib/security";
-export const runtime = "nodejs";
 
-
-// دالة مساعدة لإضافة رؤوس الأمان وتهيئة Response
-function secureResponse(body, status = 200) {
-  const headers = new Headers();
-  headers.set("Content-Type", "application/json");
-  applySecurityHeaders(headers);
-  return new Response(JSON.stringify(body), { status, headers });
-}
-
-// ===== GET =====
+// --- GET: جلب كل المانهوا أو واحدة + آخر فصلين (مفتوح للجميع) ---
 export async function GET(req) {
   try {
-    const ip = req.headers.get("x-forwarded-for") || "unknown";
-    if (!rateLimit(ip)) return secureResponse({ error: "Too many requests" }, 429);
-
     const url = new URL(req.url);
     const id = url.searchParams.get("id");
 
@@ -28,10 +13,17 @@ export async function GET(req) {
 
     if (id) {
       if (!ObjectId.isValid(id))
-        return secureResponse({ error: "معرف المانهوا غير صالح" }, 400);
+        return new Response(JSON.stringify({ error: "معرف المانهوا غير صالح" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
 
       const manhwa = await db.collection("Manhwas").findOne({ _id: new ObjectId(id) });
-      if (!manhwa) return secureResponse({ error: "لم يتم العثور على المانهوا" }, 404);
+      if (!manhwa)
+        return new Response(JSON.stringify({ error: "لم يتم العثور على المانهوا" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
 
       const chapters = await db
         .collection("chapters")
@@ -40,7 +32,10 @@ export async function GET(req) {
         .limit(2)
         .toArray();
 
-      return secureResponse({ ...manhwa, chapters });
+      return new Response(JSON.stringify({ ...manhwa, chapters }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     const manhwas = await db.collection("Manhwas").find({}).toArray();
@@ -56,49 +51,67 @@ export async function GET(req) {
       })
     );
 
-    return secureResponse(manhwasWithChapters);
+    return new Response(JSON.stringify(manhwasWithChapters), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Error fetching manhwas:", error);
-    return secureResponse({ error: "حدث خطأ في جلب المانهوا" }, 500);
+    return new Response(JSON.stringify({ error: "حدث خطأ في جلب المانهوا" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
 
-// ===== POST =====
+// --- POST: إضافة مانهوا جديدة (محمي) ---
 export async function POST(req) {
   try {
-    const ip = req.headers.get("x-forwarded-for") || "unknown";
-    if (!rateLimit(ip)) return secureResponse({ error: "Too many requests" }, 429);
-
     const authError = await requireAdminAuth(req);
-    if (authError) return authError;
+    if (authError?.error)
+      return new Response(JSON.stringify({ error: authError.error.message || "غير مصرح" }), {
+        status: authError.error.status || 401,
+        headers: { "Content-Type": "application/json" },
+      });
 
     const body = await req.json();
-    if (!body.title) return secureResponse({ error: "يجب إدخال عنوان المانهوا" }, 400);
+    if (!body.title) return new Response(JSON.stringify({ error: "يجب إدخال عنوان المانهوا" }), { status: 400, headers: { "Content-Type": "application/json" } });
 
     const client = await clientPromise;
     const db = client.db("Manhwa-domain");
 
     const result = await db.collection("Manhwas").insertOne(body);
-    return secureResponse({ message: "تم إضافة المانهوا بنجاح", id: result.insertedId });
+    return new Response(
+      JSON.stringify({ message: "تم إضافة المانهوا بنجاح", id: result.insertedId }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
   } catch (error) {
     console.error("Error adding manhwa:", error);
-    return secureResponse({ error: "حدث خطأ في إضافة المانهوا" }, 500);
+    return new Response(JSON.stringify({ error: "حدث خطأ في إضافة المانهوا" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
 
-// ===== PUT =====
+// --- PUT: تعديل مانهوا (محمي) ---
 export async function PUT(req) {
   try {
-    const ip = req.headers.get("x-forwarded-for") || "unknown";
-    if (!rateLimit(ip)) return secureResponse({ error: "Too many requests" }, 429);
-
     const authError = await requireAdminAuth(req);
-    if (authError) return authError;
+    if (authError?.error)
+      return new Response(JSON.stringify({ error: authError.error.message || "غير مصرح" }), {
+        status: authError.error.status || 401,
+        headers: { "Content-Type": "application/json" },
+      });
 
     const body = await req.json();
     const { id, ...updateData } = body;
 
-    if (!id || !ObjectId.isValid(id)) return secureResponse({ error: "معرف المانهوا غير صالح" }, 400);
+    if (!id || !ObjectId.isValid(id))
+      return new Response(JSON.stringify({ error: "معرف المانهوا غير صالح" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
 
     const client = await clientPromise;
     const db = client.db("Manhwa-domain");
@@ -107,40 +120,66 @@ export async function PUT(req) {
       .collection("Manhwas")
       .updateOne({ _id: new ObjectId(id) }, { $set: updateData });
 
-    if (result.matchedCount === 0) return secureResponse({ error: "لم يتم العثور على المانهوا" }, 404);
+    if (result.matchedCount === 0)
+      return new Response(JSON.stringify({ error: "لم يتم العثور على المانهوا" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
 
-    return secureResponse({ message: "تم تعديل المانهوا بنجاح" });
+    return new Response(JSON.stringify({ message: "تم تعديل المانهوا بنجاح" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Error updating manhwa:", error);
-    return secureResponse({ error: "حدث خطأ في تعديل المانهوا" }, 500);
+    return new Response(JSON.stringify({ error: "حدث خطأ في تعديل المانهوا" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
 
-// ===== DELETE =====
+// --- DELETE: حذف مانهوا + فصولها (محمي) ---
 export async function DELETE(req) {
   try {
-    const ip = req.headers.get("x-forwarded-for") || "unknown";
-    if (!rateLimit(ip)) return secureResponse({ error: "Too many requests" }, 429);
-
     const authError = await requireAdminAuth(req);
-    if (authError) return authError;
+    if (authError?.error)
+      return new Response(JSON.stringify({ error: authError.error.message || "غير مصرح" }), {
+        status: authError.error.status || 401,
+        headers: { "Content-Type": "application/json" },
+      });
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
-    if (!id || !ObjectId.isValid(id)) return secureResponse({ error: "معرف المانهوا غير صالح" }, 400);
+    if (!id || !ObjectId.isValid(id))
+      return new Response(JSON.stringify({ error: "معرف المانهوا غير صالح" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
 
     const client = await clientPromise;
     const db = client.db("Manhwa-domain");
 
     const result = await db.collection("Manhwas").deleteOne({ _id: new ObjectId(id) });
-    if (result.deletedCount === 0) return secureResponse({ error: "لم يتم العثور على المانهوا" }, 404);
+    if (result.deletedCount === 0)
+      return new Response(JSON.stringify({ error: "لم يتم العثور على المانهوا" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
 
+    // حذف كل الفصول المرتبطة
     await db.collection("chapters").deleteMany({ manhwaId: new ObjectId(id) });
 
-    return secureResponse({ message: "تم حذف المانهوا والفصول المرتبطة" });
+    return new Response(JSON.stringify({ message: "تم حذف المانهوا والفصول المرتبطة" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Error deleting manhwa:", error);
-    return secureResponse({ error: "حدث خطأ في الخادم" }, 500);
+    return new Response(JSON.stringify({ error: "حدث خطأ في الخادم" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }

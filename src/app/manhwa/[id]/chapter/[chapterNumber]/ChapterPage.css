@@ -1,3 +1,5 @@
+/* ====== ChapterPage.css ====== */
+
 /* ====== إعداد الصفحة العامة ====== */
 html, body {
   margin: 0;
@@ -9,7 +11,7 @@ html, body {
   overflow-x: hidden;
 }
 
-/* ====== صفحة الفصل ====== */
+/* صفحة الفصل */
 .chapter-page {
   text-align: center;
   min-height: 100vh;
@@ -17,13 +19,13 @@ html, body {
   padding-bottom: 60px;
 }
 
-/* ====== الهيدر ====== */
+/* الهيدر */
 .manhwa-header {
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 10px 0;
-  background-color: rgb(0, 0, 0); /* 🎨 لون شريط الهيدر - غيره براحتك */
+  background-color: rgb(0, 0, 0);
   box-shadow: 0 2px 8px rgba(31, 26, 26, 0.6);
 }
 
@@ -34,9 +36,9 @@ html, body {
   transition: 0.3s;
 }
 
-/* ====== صندوق اسم المانهوا ====== */
+/* صندوق اسم المانهوا */
 .manhwa-name-banner {
-  background-color: #1f101d; /* 🎨 لون خلفية الاسم */
+  background-color: #1f101d;
   border: 1px solid #4d2444;
   color: #ffffff;
   font-size: 1.4rem;
@@ -47,20 +49,10 @@ html, body {
   box-shadow: 0 0 12px rgba(163, 70, 155, 0.5);
 }
 
-/* ====== رقم الفصل ====== */
-.chapter-num-display {
-  font-size: 1.2rem;
-  color: #ccc;
-  margin-bottom: 15px;
-}
-
-/* ====== اختيار الفصول ====== */
-.chapter-select-container {
-  margin: 15px 0;
-}
-
+/* اختيار الفصول */
+.chapter-select-container { margin: 15px 0; }
 .chapter-select {
-  background-color: #1f101d; 
+  background-color: #1f101d;
   color: #fff;
   border: 1px solid #4d2444;
   padding: 6px 10px;
@@ -69,55 +61,61 @@ html, body {
   cursor: pointer;
 }
 
-.chapter-select option {
-  background-color: #1f101d;
-}
-
-/* ====== صندوق أزرار الفصول ====== */
+/* أزرار الفصول (التالي / السابق فقط) */
 .chapter-controls {
   display: flex;
   justify-content: center;
-  gap: 15px;
+  gap: 12px;
   margin: 20px auto;
-  background-color: #1f101d; /* 🎨 خلفية الصندوق */
+  background-color: #1f101d;
   border: 1px solid #4d2444;
   border-radius: 12px;
-  padding: 12px;
+  padding: 8px;
   width: fit-content;
-  box-shadow: 0 0 12px rgba(122, 70, 163, 0.4);
+  box-shadow: 0 0 12px rgba(122, 70, 163, 0.2);
 }
 
 .chapter-controls button {
   background-color: #3a2137;
   color: #fff;
   border: none;
-  border-radius: 10px;
-  padding: 10px 20px;
+  border-radius: 8px;
+  padding: 8px 14px;
   cursor: pointer;
-  transition: 0.3s;
-  font-size: 1rem;
+  transition: 0.2s;
+  font-size: 0.95rem;
 }
 
 .chapter-controls button:hover {
   background-color: #7542a0;
 }
 
-/* ====== صور الصفحات ====== */
+/* ====== صور الصفحات (عرض احترافي للكمبيوتر) ====== */
 .pages-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 25px;
+  margin: 0 auto;
+  padding: 0;
+  gap: 0;
+  max-width: 950px;
+  width: 100%;
 }
 
 .pages-container img {
-  width: 95%;
-  max-width: 750px;
-  border-radius: 10px;
-  box-shadow: 0 0 18px rgba(0, 0, 0, 0.7);
+  width: 100%;
+  height: auto;
+  max-width: 950px;
+  border: none;
+  display: block;
+  border-radius: 0;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+  margin: 0 auto;
+  user-select: none;
+  pointer-events: none;
 }
 
-/* ====== زر العودة لأعلى ====== */
+/* زر العودة لأعلى */
 .scroll-top-btn {
   position: fixed;
   bottom: 20px;
@@ -140,9 +138,18 @@ html, body {
   transform: translateY(-3px);
 }
 
-/* ====== النصوص ====== */
-.pages-container p {
-  color: #ff9dd9;
-  font-size: 1.2rem;
-  margin-top: 15px;
+/* نص الخطأ */
+.error-msg {
+  color: #ff6b8a;
+  margin: 12px 0;
+}
+
+/* شاشة التحميل */
+.loading-screen {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  height: 60vh;
+  color: #fff;
 }

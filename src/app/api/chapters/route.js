@@ -1,40 +1,25 @@
+// src/app/api/chapters/route.js
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { requireAdminAuth, verifyCsrf } from "@/lib/auth.js";
 import { checkRateLimit, sanitizeInput, applySecurityHeaders } from "@/lib/security.js";
 
-export const runtime = "edge"; // ✅ لتشغيله على Cloudflare Workers
-
-// 🔒 دالة مساعدة لإضافة هيدرز الأمان لكل الردود
-function secureHeaders() {
+export async function GET(req) {
   const headers = new Headers();
   applySecurityHeaders(headers);
-  return headers;
-}
-
-// --- GET ---
-export async function GET(req) {
-  const headers = secureHeaders();
 
   try {
-    const url = new URL(req.url);
-    const manhwaId = sanitizeInput(url.searchParams.get("manhwaId"));
+    const { searchParams } = new URL(req.url);
+    const manhwaId = searchParams.get("manhwaId");
 
     if (!manhwaId || !ObjectId.isValid(manhwaId)) {
-      return new Response(JSON.stringify({ error: "Invalid manhwaId" }), {
-        status: 400,
-        headers,
-      });
-    }
-
-    const ip = req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "unknown";
-    if (checkRateLimit(ip).limited) {
-      return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers });
+      return new Response(JSON.stringify({ error: "Invalid manhwaId" }), { status: 400, headers });
     }
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB || "Manhwa-domain");
 
+    // جلب كل الفصول المرتبة تصاعديًا
     const chapters = await db
       .collection("chapters")
       .find({ manhwaId: new ObjectId(manhwaId) })
@@ -43,17 +28,17 @@ export async function GET(req) {
 
     return new Response(JSON.stringify(chapters), { status: 200, headers });
   } catch (err) {
-    console.error("❌ Error fetching chapters:", err);
+    console.error("Error fetching chapters:", err);
     return new Response(JSON.stringify({ error: "Server error" }), { status: 500, headers });
   }
 }
 
-// --- POST ---
 export async function POST(req) {
-  const headers = secureHeaders();
+  const headers = new Headers();
+  applySecurityHeaders(headers);
 
   try {
-    const ip = req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "unknown";
+    const ip = req.headers.get("x-forwarded-for") || "local";
     if (checkRateLimit(ip).limited) {
       return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers });
     }
@@ -84,17 +69,17 @@ export async function POST(req) {
 
     return new Response(JSON.stringify({ message: "saved" }), { status: 200, headers });
   } catch (err) {
-    console.error("❌ Error saving chapter:", err);
+    console.error("Error saving chapter:", err);
     return new Response(JSON.stringify({ error: "Server error" }), { status: 500, headers });
   }
 }
 
-// --- DELETE ---
 export async function DELETE(req) {
-  const headers = secureHeaders();
+  const headers = new Headers();
+  applySecurityHeaders(headers);
 
   try {
-    const ip = req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "unknown";
+    const ip = req.headers.get("x-forwarded-for") || "local";
     if (checkRateLimit(ip).limited) {
       return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers });
     }
@@ -107,9 +92,9 @@ export async function DELETE(req) {
       return new Response(JSON.stringify({ error: "Invalid CSRF" }), { status: 403, headers });
     }
 
-    const url = new URL(req.url);
-    const manhwaId = sanitizeInput(url.searchParams.get("manhwaId"));
-    const number = parseInt(url.searchParams.get("number"), 10);
+    const { searchParams } = new URL(req.url);
+    const manhwaId = searchParams.get("manhwaId");
+    const number = parseInt(searchParams.get("number"), 10);
 
     if (!manhwaId || !ObjectId.isValid(manhwaId) || isNaN(number)) {
       return new Response(JSON.stringify({ error: "Invalid data" }), { status: 400, headers });
@@ -118,7 +103,10 @@ export async function DELETE(req) {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB || "Manhwa-domain");
 
-    const result = await db.collection("chapters").deleteOne({ manhwaId: new ObjectId(manhwaId), number });
+    const result = await db.collection("chapters").deleteOne({
+      manhwaId: new ObjectId(manhwaId),
+      number,
+    });
 
     if (result.deletedCount === 0) {
       return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers });
@@ -126,7 +114,7 @@ export async function DELETE(req) {
 
     return new Response(JSON.stringify({ message: "deleted" }), { status: 200, headers });
   } catch (err) {
-    console.error("❌ Error deleting chapter:", err);
+    console.error("Error deleting chapter:", err);
     return new Response(JSON.stringify({ error: "Server error" }), { status: 500, headers });
   }
 }
